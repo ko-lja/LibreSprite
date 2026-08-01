@@ -101,6 +101,11 @@ public:
     m_ok_button->set_label("_Open");
   }
 
+  void toOpenFolder() override {
+    this->set_action(Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
+    m_ok_button->set_label("_Open");
+  }
+
   void toSaveFile() override {
     this->set_action(Gtk::FILE_CHOOSER_ACTION_SAVE);
     m_ok_button->set_label("_Save");

@@ -16,6 +16,7 @@ namespace she {
     virtual ~FileDialog() { }
     virtual void dispose() = 0;
     virtual void toOpenFile() = 0; // Configure the dialog to open a file
+    virtual void toOpenFolder() = 0; // Configure the dialog to open a folder
     virtual void toSaveFile() = 0; // Configure the dialog to save a file
     virtual void setTitle(const std::string& title) = 0;
     virtual void setDefaultExtension(const std::string& extension) = 0;

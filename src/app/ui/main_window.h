@@ -24,6 +24,7 @@ namespace app {
   class DevConsoleView;
   class DocumentView;
   class HomeView;
+  class FolderView;
   class INotificationDelegate;
   class MainMenuBar;
   class Notifications;
@@ -63,6 +64,10 @@ namespace app {
     void showHome();
     bool isHomeSelected();
     void showDevConsole();
+    void openFolder(const std::string& path);
+    void folderViewSelected(FolderView* folderView);
+    void folderViewClosed(FolderView* folderView);
+    FolderView* activeFolderView() const;
 
     Mode getMode() const { return m_mode; }
     void setMode(Mode mode);
@@ -97,6 +102,7 @@ namespace app {
   private:
     DocumentView* getDocView();
     HomeView* getHomeView();
+    void detachFolderExplorer();
     void configureWorkspaceLayout();
 
     MainMenuBar* m_menuBar;

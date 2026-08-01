@@ -16,6 +16,7 @@
 #include "app/ui/color_bar.h"
 #include "app/ui/document_view.h"
 #include "app/ui/editor/editor.h"
+#include "app/ui/folder_view.h"
 #include "app/ui/input_chain.h"
 #include "app/ui/main_window.h"
 #include "app/ui/preview_editor.h"
@@ -35,6 +36,7 @@ UIContext* UIContext::m_instance = nullptr;
 UIContext::UIContext()
   : m_lastSelectedDoc(nullptr)
   , m_lastSelectedView(nullptr)
+  , m_documentViewDestination(nullptr)
 {
   documents().addObserver(&Preferences::instance());
 
@@ -70,6 +72,8 @@ DocumentView* UIContext::activeView() const
     return nullptr;
 
   WorkspaceView* view = workspace->activeView();
+  if (auto* folderView = dynamic_cast<FolderView*>(view))
+    return folderView->activeDocumentView();
   if (DocumentView* docView = dynamic_cast<DocumentView*>(view))
     return docView;
   else
@@ -84,6 +88,30 @@ void UIContext::setActiveView(DocumentView* docView)
   if (!mainWin)
     return;
 
+  auto* rootWorkspace = mainWin->getWorkspace();
+  FolderView* owner = nullptr;
+  if (docView) {
+    for (auto* view : *rootWorkspace) {
+      auto* folderView = dynamic_cast<FolderView*>(view);
+      if (folderView && folderView->contains(docView)) {
+        owner = folderView;
+        break;
+      }
+    }
+    if (owner) {
+      if (rootWorkspace->activeView() != owner)
+        rootWorkspace->setActiveView(owner);
+      mainWin->getTabsBar()->selectTab(owner);
+      if (owner->workspace()->activeView() != docView)
+        owner->workspace()->setActiveView(docView);
+    }
+    else {
+      mainWin->getTabsBar()->selectTab(docView);
+      if (rootWorkspace->activeView() != docView)
+        rootWorkspace->setActiveView(docView);
+    }
+  }
+
   // Prioritize workspace for user input.
   App::instance()->inputChain().prioritize(mainWin->getWorkspace());
 
@@ -92,13 +120,6 @@ void UIContext::setActiveView(DocumentView* docView)
   if (m_lastSelectedView == docView ||
       (docView && docView->isPreview()))
     return;
-
-  if (docView) {
-    mainWin->getTabsBar()->selectTab(docView);
-
-    if (mainWin->getWorkspace()->activeView() != docView)
-      mainWin->getWorkspace()->setActiveView(docView);
-  }
 
   current_editor = (docView ? docView->editor(): nullptr);
 
@@ -153,6 +174,13 @@ DocumentView* UIContext::getFirstDocumentView(doc::Document* document) const
         return docView;
       }
     }
+    else if (auto* folderView = dynamic_cast<FolderView*>(view)) {
+      for (auto* nestedView : *folderView->workspace()) {
+        auto* docView = dynamic_cast<DocumentView*>(nestedView);
+        if (docView && docView->document() == document)
+          return docView;
+      }
+    }
   }
 
   return nullptr;
@@ -169,9 +197,41 @@ DocumentViews UIContext::getAllDocumentViews(doc::Document* document) const
         docViews.push_back(docView);
       }
     }
+    else if (auto* folderView = dynamic_cast<FolderView*>(view)) {
+      for (auto* nestedView : *folderView->workspace()) {
+        auto* docView = dynamic_cast<DocumentView*>(nestedView);
+        if (docView && docView->document() == document)
+          docViews.push_back(docView);
+      }
+    }
   }
 
   return docViews;
+}
+
+Workspace* UIContext::workspaceFor(DocumentView* documentView) const
+{
+  auto* rootWorkspace = App::instance()->workspace();
+  if (!rootWorkspace)
+    return nullptr;
+  for (auto* view : *rootWorkspace) {
+    if (view == documentView)
+      return rootWorkspace;
+    auto* folderView = dynamic_cast<FolderView*>(view);
+    if (folderView && folderView->contains(documentView))
+      return folderView->workspace();
+  }
+  return nullptr;
+}
+
+Workspace* UIContext::activeWorkspace() const
+{
+  auto* rootWorkspace = App::instance()->workspace();
+  if (!rootWorkspace)
+    return nullptr;
+  if (auto* folderView = dynamic_cast<FolderView*>(rootWorkspace->activeView()))
+    return folderView->workspace();
+  return rootWorkspace;
 }
 
 Editor* UIContext::activeEditor()
@@ -198,7 +258,10 @@ void UIContext::onAddDocument(doc::Document* doc)
     App::instance()->mainWindow()->getPreviewEditor());
 
   // Add a tab with the new view for the document
-  App::instance()->workspace()->addView(view);
+  if (m_documentViewDestination)
+    m_documentViewDestination->addDocumentView(view);
+  else
+    App::instance()->workspace()->addView(view);
 
   setActiveView(view);
   view->editor()->setDefaultScroll();
@@ -211,10 +274,10 @@ void UIContext::onRemoveDocument(doc::Document* doc)
 
   // We don't destroy views in batch mode.
   if (isUIAvailable()) {
-    Workspace* workspace = App::instance()->workspace();
-
     for (DocumentView* docView : getAllDocumentViews(doc)) {
-      workspace->removeView(docView);
+      Workspace* workspace = workspaceFor(docView);
+      if (workspace)
+        workspace->removeView(docView);
       delete docView;
     }
   }

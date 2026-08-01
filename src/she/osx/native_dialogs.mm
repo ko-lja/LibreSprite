@@ -83,6 +83,7 @@ class FileDialogOSX : public FileDialog {
 public:
   FileDialogOSX()
     : m_save(false)
+    , m_folder(false)
   {
   }
 
@@ -92,10 +93,17 @@ public:
 
   void toOpenFile() override {
     m_save = false;
+    m_folder = false;
+  }
+
+  void toOpenFolder() override {
+    m_save = false;
+    m_folder = true;
   }
 
   void toSaveFile() override {
     m_save = true;
+    m_folder = false;
   }
 
   void setTitle(const std::string& title) override {
@@ -130,14 +138,17 @@ public:
     else {
       panel = [NSOpenPanel openPanel];
       [(NSOpenPanel*)panel setAllowsMultipleSelection:NO];
-      [(NSOpenPanel*)panel setCanChooseDirectories:NO];
+      [(NSOpenPanel*)panel setCanChooseDirectories:m_folder ? YES: NO];
+      [(NSOpenPanel*)panel setCanChooseFiles:m_folder ? NO: YES];
     }
 
     [panel setTitle:[NSString stringWithUTF8String:m_title.c_str()]];
     [panel setCanCreateDirectories:YES];
 
-    std::string defPath = base::get_file_path(m_filename);
-    std::string defName = base::get_file_name(m_filename);
+    std::string defPath =
+      (m_folder ? m_filename: base::get_file_path(m_filename));
+    std::string defName =
+      (m_folder ? std::string(): base::get_file_name(m_filename));
     if (!defPath.empty())
       [panel setDirectoryURL:[NSURL fileURLWithPath:[NSString stringWithUTF8String:defPath.c_str()]]];
     if (!defName.empty())
@@ -179,6 +190,7 @@ private:
   std::string m_filename;
   std::string m_title;
   bool m_save;
+  bool m_folder;
 };
 
 NativeDialogsOSX::NativeDialogsOSX()

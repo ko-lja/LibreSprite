@@ -235,6 +235,7 @@ add_library(app-lib
   commands/cmd_new_sprite_from_selection.cpp
   commands/cmd_onionskin.cpp
   commands/cmd_open_file.cpp
+  commands/cmd_open_folder.cpp
   commands/cmd_open_in_folder.cpp
   commands/cmd_open_scripts_folder.cpp
   commands/cmd_open_with_app.cpp
@@ -420,6 +421,8 @@ add_library(app-lib
   ui/file_list.cpp
   ui/file_list_view.cpp
   ui/file_selector.cpp
+  ui/folder_tree_model.cpp
+  ui/folder_view.cpp
   ui/font_popup.cpp
   ui/frame_tag_window.cpp
   ui/hex_color_entry.cpp

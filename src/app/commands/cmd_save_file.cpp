@@ -147,6 +147,7 @@ SaveFileBaseCommand::SaveFileBaseCommand(const char* short_name, const char* fri
 void SaveFileBaseCommand::onLoadParams(const Params& params)
 {
   m_filename = params.get("filename");
+  m_folder = params.get("folder");
   m_filenameFormat = params.get("filename-format");
 }
 
@@ -176,6 +177,12 @@ bool SaveFileBaseCommand::saveAsDialog(Context* context,
   else {
     std::string exts = get_writable_extensions();
     filename = document->filename();
+    if (!m_folder.empty()) {
+      auto title = base::get_file_title(filename);
+      if (title.empty())
+        title = "Sprite";
+      filename = base::join_path(m_folder, title + ".ase");
+    }
 
     std::string newfilename = app::show_file_selector(
       dlgTitle, filename, exts,

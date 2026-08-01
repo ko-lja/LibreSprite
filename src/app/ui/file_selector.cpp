@@ -302,6 +302,13 @@ FileSelector::FileSelector(FileSelectorType type, FileSelectorDelegate* delegate
     resize()->setValue("1");    // 100% is default
     resize()->setValue(base::convert_to<std::string>(m_delegate->getResizeScale()));
   }
+
+  if (m_type == FileSelectorType::Folder) {
+    findChild("file_name_label")->setVisible(false);
+    m_fileName->parent()->setVisible(false);
+    findChild("file_type_label")->setVisible(false);
+    findChild("file_type_row")->setVisible(false);
+  }
 }
 
 void FileSelector::goBack()
@@ -349,8 +356,11 @@ std::string FileSelector::show(
   std::string start_folder_path;
   IFileItem* start_folder = NULL;
 
+  if (m_type == FileSelectorType::Folder && !initialPath.empty()) {
+    start_folder_path = initialPath;
+  }
   // If initialPath doesn't contain a path.
-  if (base::get_file_path(initialPath).empty()) {
+  else if (base::get_file_path(initialPath).empty()) {
     // Get the saved `path' in the configuration file.
     std::string path = get_config_string("FileSelect", "CurrentDirectory", "<empty>");
     if (path == "<empty>") {
@@ -384,11 +394,13 @@ std::string FileSelector::show(
     else
       exts = preferred_open_extensions[exts];
   }
-  else {
+  else if (m_type == FileSelectorType::Save) {
     ASSERT(m_type == FileSelectorType::Save);
     if (!initialExtension.empty())
       exts = initialExtension;
   }
+  else
+    exts = "__folder_selector__";
   m_fileList->setExtensions(exts.c_str());
   if (start_folder)
     m_fileList->setCurrentFolder(start_folder);
@@ -442,6 +454,8 @@ std::string FileSelector::show(
 
   // get the ok-button
   Widget* ok = this->findChild("ok");
+  if (m_type == FileSelectorType::Folder)
+    ok->setText("&Open Folder");
 
   // update the view
   View::getView(m_fileList)->updateView();
@@ -454,6 +468,16 @@ again:
     // open the selected file
     IFileItem* folder = m_fileList->getCurrentFolder();
     ASSERT(folder);
+
+    if (m_type == FileSelectorType::Folder) {
+      IFileItem* selected = m_fileList->getSelectedFileItem();
+      IFileItem* selectedFolder =
+        (selected && selected->isFolder() ? selected: folder);
+      result = selectedFolder->fileName();
+      set_config_string("FileSelect", "CurrentDirectory",
+                        selectedFolder->keyName().c_str());
+      return result;
+    }
 
     std::string fn = m_fileName->getValue();
     std::string buf;
@@ -753,7 +777,8 @@ void FileSelector::onNewFolder()
     if (currentFolder) {
       std::string dirname = window.name()->text();
 
-      if (m_type == FileSelectorType::Save) {
+      if (m_type == FileSelectorType::Save ||
+          m_type == FileSelectorType::Folder) {
         if (const size_t fver = base::verify_filename(dirname); fver != std::string::npos)
         {
           Alert::show("Error<<Invalid folder name: \"%s\"<<The name contains an invalid '%c' character.||&OK",

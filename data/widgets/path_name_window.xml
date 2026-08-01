@@ -1,0 +1,18 @@
+<!-- LibreSprite -->
+<gui>
+  <window text="Name" id="path_name_window">
+    <vbox>
+      <hbox>
+        <label id="label" text="Name:" />
+        <entry text="" id="name" maxsize="256" magnet="true" expansive="true" />
+      </hbox>
+      <hbox>
+        <boxfiller />
+        <hbox homogeneous="true">
+          <button text="&amp;OK" closewindow="true" id="ok" magnet="true" width="60" />
+          <button text="&amp;Cancel" closewindow="true" id="cancel" />
+        </hbox>
+      </hbox>
+    </vbox>
+  </window>
+</gui>

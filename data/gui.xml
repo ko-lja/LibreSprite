@@ -514,6 +514,7 @@
       <menu text="&amp;File">
         <item command="NewFile" text="&amp;New..." />
         <item command="OpenFile" text="&amp;Open..." />
+        <item command="OpenFolder" text="Open &amp;Folder..." />
         <item id="recent_list" text="Open &amp;Recent" />
         <separator />
         <item command="SaveFile" text="&amp;Save" />

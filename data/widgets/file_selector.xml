@@ -14,11 +14,11 @@
     </box>
     <vbox id="file_view_placeholder" expansive="true" />
     <grid columns="2">
-      <label text="File name:" />
+      <label id="file_name_label" text="File name:" />
       <box id="file_name_placeholder" cell_align="horizontal" />
 
-      <label text="File type:" />
-      <hbox cell_align="horizontal">
+      <label id="file_type_label" text="File type:" />
+      <hbox id="file_type_row" cell_align="horizontal">
         <combobox id="file_type" minwidth="70" />
         <hbox id="resize_options">
           <label text="Resize:" />

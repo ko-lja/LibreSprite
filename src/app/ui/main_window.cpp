@@ -24,6 +24,7 @@
 #include "app/ui/document_view.h"
 #include "app/ui/editor/editor.h"
 #include "app/ui/editor/editor_view.h"
+#include "app/ui/folder_view.h"
 #include "app/ui/home_view.h"
 #include "app/ui/main_menu_bar.h"
 #include "app/ui/notifications.h"
@@ -41,6 +42,8 @@
 #include "ui/splitter.h"
 #include "ui/system.h"
 #include "ui/view.h"
+
+#include <vector>
 
 namespace app {
 
@@ -112,6 +115,7 @@ MainWindow::MainWindow()
   timelinePlaceholder()->addChild(m_timeline);
 
   // Default splitter positions
+  folderViewSplitter()->setPosition(180*guiscale());
   colorBarSplitter()->setPosition(m_colorBar->sizeHint().w);
   timelineSplitter()->setPosition(75);
 
@@ -173,6 +177,17 @@ void MainWindow::toggleTouchbar() {
 
 MainWindow::~MainWindow()
 {
+  std::vector<FolderView*> folderViews;
+  for (auto* view : *m_workspace) {
+    if (auto* folderView = dynamic_cast<FolderView*>(view))
+      folderViews.push_back(folderView);
+  }
+  detachFolderExplorer();
+  for (auto* folderView : folderViews) {
+    m_workspace->removeView(folderView);
+    delete folderView;
+  }
+
   if (m_devConsoleView) {
     if (m_devConsoleView->parent())
       m_workspace->removeView(m_devConsoleView);
@@ -198,7 +213,60 @@ MainWindow::~MainWindow()
 
 DocumentView* MainWindow::getDocView()
 {
+  if (auto* folderView = dynamic_cast<FolderView*>(m_workspace->activeView()))
+    return folderView->activeDocumentView();
   return dynamic_cast<DocumentView*>(m_workspace->activeView());
+}
+
+FolderView* MainWindow::activeFolderView() const
+{
+  return dynamic_cast<FolderView*>(m_workspace->activeView());
+}
+
+void MainWindow::openFolder(const std::string& path)
+{
+  const auto normalized = base::normalize_path(path);
+  for (auto* view : *m_workspace) {
+    auto* folderView = dynamic_cast<FolderView*>(view);
+    if (folderView &&
+        base::compare_filenames(folderView->path(), normalized) == 0) {
+      m_workspace->setActiveView(folderView);
+      m_tabsBar->selectTab(folderView);
+      return;
+    }
+  }
+
+  auto* folderView = new FolderView(normalized);
+  m_workspace->addView(folderView);
+  m_workspace->setActiveView(folderView);
+  m_tabsBar->selectTab(folderView);
+}
+
+void MainWindow::folderViewSelected(FolderView* folderView)
+{
+  if (activeFolderView() != folderView)
+    return;
+  folderView->refreshExplorer();
+  auto* explorer = folderView->explorerWidget();
+  if (explorer->parent() != folderViewPlaceholder()) {
+    detachFolderExplorer();
+    folderViewPlaceholder()->addChild(explorer);
+  }
+  folderViewPlaceholder()->setVisible(m_mode == NormalMode);
+  configureWorkspaceLayout();
+}
+
+void MainWindow::folderViewClosed(FolderView* folderView)
+{
+  if (folderView->explorerWidget()->parent() == folderViewPlaceholder())
+    folderViewPlaceholder()->removeChild(folderView->explorerWidget());
+}
+
+void MainWindow::detachFolderExplorer()
+{
+  if (!folderViewPlaceholder()->children().empty())
+    folderViewPlaceholder()->removeChild(folderViewPlaceholder()->children().front());
+  folderViewPlaceholder()->setVisible(false);
 }
 
 HomeView* MainWindow::getHomeView()
@@ -318,10 +386,17 @@ void MainWindow::onSaveLayout(SaveLayoutEvent& ev)
 // inform to the UIContext that the current view has changed.
 void MainWindow::onActiveViewChange()
 {
-  if (DocumentView* docView = getDocView())
-    UIContext::instance()->setActiveView(docView);
-  else
-    UIContext::instance()->setActiveView(nullptr);
+  if (auto* folderView = activeFolderView()) {
+    folderViewSelected(folderView);
+    UIContext::instance()->setActiveView(folderView->activeDocumentView());
+  }
+  else {
+    detachFolderExplorer();
+    if (DocumentView* docView = getDocView())
+      UIContext::instance()->setActiveView(docView);
+    else
+      UIContext::instance()->setActiveView(nullptr);
+  }
 
   configureWorkspaceLayout();
 }
@@ -331,6 +406,9 @@ bool MainWindow::isTabModified(Tabs* tabs, TabView* tabView)
   if (DocumentView* docView = dynamic_cast<DocumentView*>(tabView)) {
     Document* document = docView->document();
     return document->isModified();
+  }
+  else if (auto* folderView = dynamic_cast<FolderView*>(tabView)) {
+    return folderView->hasModifiedDocuments();
   }
   else {
     return false;
@@ -399,6 +477,9 @@ void MainWindow::onMouseOverTab(Tabs* tabs, TabView* tabView)
 
     m_statusBar->setStatusText(250, "%s", name.c_str());
   }
+  else if (auto* folderView = dynamic_cast<FolderView*>(tabView)) {
+    m_statusBar->setStatusText(250, "%s", folderView->path().c_str());
+  }
   else {
     m_statusBar->clearText();
   }
@@ -435,10 +516,12 @@ void MainWindow::configureWorkspaceLayout()
 {
   bool normal = (m_mode == NormalMode);
   bool isDoc = (getDocView() != nullptr);
+  bool isFolder = (activeFolderView() != nullptr);
 
   m_menuBar->setVisible(normal);
   m_tabsBar->setVisible(normal);
   colorBarPlaceholder()->setVisible(normal && isDoc);
+  folderViewPlaceholder()->setVisible(normal && isFolder);
   m_touchBar->setVisible(normal && isDoc && Preferences::instance().touchBar.visible());
   m_toolBar->setVisible(normal && isDoc);
   m_statusBar->setVisible(normal);

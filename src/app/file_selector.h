@@ -11,7 +11,7 @@
 
 namespace app {
 
-  enum class FileSelectorType { Open, Save };
+  enum class FileSelectorType { Open, Folder, Save };
 
   class FileSelectorDelegate {
   public:
@@ -27,5 +27,9 @@ namespace app {
     const std::string& showExtensions,
     FileSelectorType type,
     FileSelectorDelegate* delegate = nullptr);
+
+  std::string show_folder_selector(
+    const std::string& title,
+    const std::string& initialPath = std::string());
 
 } // namespace app

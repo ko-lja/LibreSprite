@@ -30,6 +30,7 @@ namespace app {
                       FileSelectorDelegate* delegate = nullptr);
 
     std::string m_filename;
+    std::string m_folder;
     std::string m_filenameFormat;
     std::string m_selectedFilename;
   };

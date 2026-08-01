@@ -16,6 +16,7 @@
 #include "she/error.h"
 
 #include <windows.h>
+#include <shlobj.h>
 
 #include <string>
 #include <vector>
@@ -29,7 +30,9 @@ class FileDialogWin32 : public FileDialog {
 public:
   FileDialogWin32()
     : m_filename(FILENAME_BUFSIZE)
-    , m_save(false) {
+    , m_defFilter(0)
+    , m_save(false)
+    , m_folder(false) {
   }
 
   void dispose() override {
@@ -38,10 +41,17 @@ public:
 
   void toOpenFile() override {
     m_save = false;
+    m_folder = false;
+  }
+
+  void toOpenFolder() override {
+    m_save = false;
+    m_folder = true;
   }
 
   void toSaveFile() override {
     m_save = true;
+    m_folder = false;
   }
 
   void setTitle(const std::string& title) override {
@@ -65,11 +75,15 @@ public:
   }
 
   void setFileName(const std::string& filename) override {
+    m_inputPath = base::from_utf8(filename);
     wcscpy(&m_filename[0], base::from_utf8(base::get_file_name(filename)).c_str());
     m_initialDir = base::from_utf8(base::get_file_path(filename));
   }
 
   bool show(Display* parent) override {
+    if (m_folder)
+      return showFolder(parent);
+
     std::wstring filtersWStr = getFiltersForGetOpenFileName();
 
     OPENFILENAME ofn;
@@ -117,6 +131,33 @@ public:
 
 private:
 
+  static int CALLBACK browseCallback(HWND hwnd, UINT msg, LPARAM, LPARAM data) {
+    if (msg == BFFM_INITIALIZED && data)
+      SendMessage(hwnd, BFFM_SETSELECTIONW, TRUE, data);
+    return 0;
+  }
+
+  bool showFolder(Display* parent) {
+    BROWSEINFOW bi;
+    ZeroMemory(&bi, sizeof(bi));
+    bi.hwndOwner = (HWND)parent->nativeHandle();
+    bi.lpszTitle = m_title.c_str();
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+    bi.lpfn = &FileDialogWin32::browseCallback;
+    const std::wstring& initialFolder =
+      (m_inputPath.empty() ? m_initialDir: m_inputPath);
+    bi.lParam = reinterpret_cast<LPARAM>(initialFolder.empty() ?
+      nullptr: initialFolder.c_str());
+
+    LPITEMIDLIST item = SHBrowseForFolderW(&bi);
+    if (!item)
+      return false;
+
+    const BOOL ok = SHGetPathFromIDListW(item, &m_filename[0]);
+    CoTaskMemFree(item);
+    return ok != FALSE;
+  }
+
   std::wstring getFiltersForGetOpenFileName() const {
     std::wstring filters;
 
@@ -159,8 +200,10 @@ private:
   int m_defFilter;
   std::vector<WCHAR> m_filename;
   std::wstring m_initialDir;
+  std::wstring m_inputPath;
   std::wstring m_title;
   bool m_save;
+  bool m_folder;
 };
 
 NativeDialogsWin32::NativeDialogsWin32()

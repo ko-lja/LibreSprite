@@ -13,6 +13,7 @@
 
 #include "app/app.h"
 #include "app/ui/workspace.h"
+#include "app/ui_context.h"
 
 #include <cstdio>
 
@@ -39,14 +40,14 @@ DuplicateViewCommand::DuplicateViewCommand()
 
 bool DuplicateViewCommand::onEnabled(Context* context)
 {
-  Workspace* workspace = App::instance()->workspace();
+  Workspace* workspace = UIContext::instance()->activeWorkspace();
   WorkspaceView* view = workspace->activeView();
   return (view != nullptr);
 }
 
 void DuplicateViewCommand::onExecute(Context* context)
 {
-  App::instance()->workspace()->duplicateActiveView();
+  UIContext::instance()->activeWorkspace()->duplicateActiveView();
 }
 
 Command* CommandFactory::createDuplicateViewCommand()

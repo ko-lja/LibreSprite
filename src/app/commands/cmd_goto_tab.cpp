@@ -13,6 +13,7 @@
 
 #include "app/app.h"
 #include "app/ui/workspace.h"
+#include "app/ui_context.h"
 
 namespace app {
 
@@ -35,12 +36,12 @@ GotoNextTabCommand::GotoNextTabCommand()
 
 bool GotoNextTabCommand::onEnabled(Context* context)
 {
-  return App::instance()->workspace()->canSelectOtherTab();
+  return UIContext::instance()->activeWorkspace()->canSelectOtherTab();
 }
 
 void GotoNextTabCommand::onExecute(Context* context)
 {
-  App::instance()->workspace()->selectNextTab();
+  UIContext::instance()->activeWorkspace()->selectNextTab();
 }
 
 class GotoPreviousTabCommand : public Command {
@@ -62,12 +63,12 @@ GotoPreviousTabCommand::GotoPreviousTabCommand()
 
 bool GotoPreviousTabCommand::onEnabled(Context* context)
 {
-  return App::instance()->workspace()->canSelectOtherTab();
+  return UIContext::instance()->activeWorkspace()->canSelectOtherTab();
 }
 
 void GotoPreviousTabCommand::onExecute(Context* context)
 {
-  App::instance()->workspace()->selectPreviousTab();
+  UIContext::instance()->activeWorkspace()->selectPreviousTab();
 }
 
 Command* CommandFactory::createGotoNextTabCommand()

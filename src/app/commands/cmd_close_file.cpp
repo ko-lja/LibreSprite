@@ -41,13 +41,13 @@ public:
 protected:
 
   bool onEnabled(Context* context) override {
-    Workspace* workspace = App::instance()->workspace();
+    Workspace* workspace = UIContext::instance()->activeWorkspace();
     WorkspaceView* view = workspace->activeView();
     return (view != nullptr);
   }
 
   void onExecute(Context* context) override {
-    Workspace* workspace = App::instance()->workspace();
+    Workspace* workspace = UIContext::instance()->activeWorkspace();
     WorkspaceView* view = workspace->activeView();
     if (view)
       workspace->closeView(view, false);
@@ -72,19 +72,17 @@ protected:
   }
 
   void onExecute(Context* context) override {
-    Workspace* workspace = App::instance()->workspace();
+    auto* uiContext = UIContext::instance();
+    std::vector<doc::Document*> documents;
+    for (auto* document : uiContext->documents())
+      documents.push_back(document);
 
-    // Collect all document views
-    DocumentViews docViews;
-    for (auto view : *workspace) {
-      DocumentView* docView = dynamic_cast<DocumentView*>(view);
-      if (docView)
-        docViews.push_back(docView);
-    }
-
-    for (auto docView : docViews) {
-      if (!workspace->closeView(docView, m_quitting))
-        break;
+    for (auto* document : documents) {
+      while (auto* docView = uiContext->getFirstDocumentView(document)) {
+        auto* workspace = uiContext->workspaceFor(docView);
+        if (!workspace || !workspace->closeView(docView, m_quitting))
+          return;
+      }
     }
   }
 

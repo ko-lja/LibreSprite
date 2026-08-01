@@ -13,6 +13,8 @@
 namespace app {
   class DocumentView;
   class Editor;
+  class FolderView;
+  class Workspace;
 
   typedef std::vector<DocumentView*> DocumentViews;
 
@@ -31,6 +33,15 @@ namespace app {
 
     DocumentView* getFirstDocumentView(doc::Document* document) const;
     DocumentViews getAllDocumentViews(doc::Document* document) const;
+    Workspace* workspaceFor(DocumentView* documentView) const;
+    Workspace* activeWorkspace() const;
+
+    FolderView* documentViewDestination() const {
+      return m_documentViewDestination;
+    }
+    void setDocumentViewDestination(FolderView* folderView) {
+      m_documentViewDestination = folderView;
+    }
 
     // Returns the current editor. It can be null.
     Editor* activeEditor();
@@ -47,6 +58,7 @@ namespace app {
   private:
     Document* m_lastSelectedDoc;
     DocumentView* m_lastSelectedView;
+    FolderView* m_documentViewDestination;
     static UIContext* m_instance;
   };
 

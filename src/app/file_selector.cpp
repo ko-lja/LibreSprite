@@ -41,6 +41,8 @@ std::string show_file_selector(
 
       if (type == FileSelectorType::Save)
         dlg->toSaveFile();
+      else if (type == FileSelectorType::Folder)
+        dlg->toOpenFolder();
       else
         dlg->toOpenFile();
 
@@ -59,6 +61,14 @@ std::string show_file_selector(
 
   FileSelector fileSelector(type, delegate);
   return fileSelector.show(title, initialPath, showExtensions);
+}
+
+std::string show_folder_selector(
+  const std::string& title,
+  const std::string& initialPath)
+{
+  return show_file_selector(
+    title, initialPath, std::string(), FileSelectorType::Folder);
 }
 
 } // namespace app
