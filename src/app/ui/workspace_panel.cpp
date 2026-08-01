@@ -256,6 +256,7 @@ DropViewAtResult WorkspacePanel::dropViewAt(const gfx::Point& pos, WorkspacePane
 
   WorkspaceTabs* newTabs = new WorkspaceTabs(m_tabs->getDelegate());
   WorkspacePanel* newPanel = new WorkspacePanel(SUB_PANEL);
+  newTabs->setWorkspace(workspace);
   newTabs->setDockedStyle();
   newPanel->setTabsBar(newTabs);
   newPanel->setExpansive(true);

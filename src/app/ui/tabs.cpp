@@ -84,6 +84,24 @@ Tabs::~Tabs()
   m_list.clear();
 }
 
+Tabs* Tabs::getTabsAt(const gfx::Point& pos)
+{
+  Widget* widget = manager()->pick(pos);
+  while (widget) {
+    if (widget->type() == Tabs::Type())
+      return static_cast<Tabs*>(widget);
+    widget = widget->parent();
+  }
+  return nullptr;
+}
+
+bool Tabs::canDockAt(const gfx::Point& pos)
+{
+  Tabs* target = getTabsAt(pos);
+  return (!target || target == this ||
+          (canDockWith(target) && target->canDockWith(this)));
+}
+
 void Tabs::addTab(TabView* tabView, bool from_drop, int pos)
 {
   resetOldPositions();
@@ -330,7 +348,11 @@ bool Tabs::onProcessMessage(Message* msg)
               startRemoveDragTabAnimation();
             }
 
-            if (m_delegate)
+            if (!canDockAt(mousePos)) {
+              if (m_delegate)
+                m_delegate->onDockingTab(this, m_selected->view);
+            }
+            else if (m_delegate)
               result = m_delegate->onFloatingTab(this, m_selected->view, mousePos);
 
             if (result != DropViewPreviewResult::DROP_IN_TABS) {
@@ -413,7 +435,7 @@ bool Tabs::onProcessMessage(Message* msg)
         else {
           DropTabResult result = DropTabResult::NOT_HANDLED;
 
-          if (m_delegate) {
+          if (m_delegate && canDockAt(mouseMsg->position())) {
             ASSERT(m_selected);
             result = m_delegate->onDropTab(
               this, m_selected->view,

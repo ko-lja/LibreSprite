@@ -57,6 +57,7 @@ Workspace::~Workspace()
 void Workspace::setTabsBar(WorkspaceTabs* tabs)
 {
   m_tabs = tabs;
+  m_tabs->setWorkspace(this);
   m_mainPanel.setTabsBar(tabs);
 }
 
@@ -172,7 +173,8 @@ DropViewPreviewResult Workspace::setDropViewPreview(const gfx::Point& pos,
   WorkspaceView* view, WorkspaceTabs* tabs)
 {
   WorkspacePanel* sourcePanel = getViewPanel(view);
-  if (!sourcePanel || !ownsPanel(sourcePanel)) {
+  if (!tabs || tabs->workspace() != this ||
+      !sourcePanel || !ownsPanel(sourcePanel)) {
     removeDropViewPreview();
     return DropViewPreviewResult::FLOATING;
   }
@@ -320,13 +322,8 @@ WorkspaceTabs* Workspace::getTabsAt(const gfx::Point& pos)
 
 bool Workspace::ownsPanel(WorkspacePanel* panel) const
 {
-  Widget* widget = panel;
-  while (widget) {
-    if (widget->type() == Workspace::Type())
-      return widget == this;
-    widget = widget->parent();
-  }
-  return false;
+  return (panel && panel->tabs() &&
+          panel->tabs()->workspace() == this);
 }
 
 void Workspace::onNewInputPriority(InputChainElement* newElement)

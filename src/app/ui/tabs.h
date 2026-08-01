@@ -148,6 +148,10 @@ namespace app {
 
     TabsDelegate* getDelegate() { return m_delegate; }
 
+    // Returns true when tabs can be dragged between both tab bars.
+    // WorkspaceTabs overrides this to keep nested workspaces isolated.
+    virtual bool canDockWith(const Tabs* tabs) const { return true; }
+
     void addTab(TabView* tabView, bool from_drop, int pos = -1);
     void removeTab(TabView* tabView, bool with_animation);
     void updateTabs();
@@ -187,6 +191,8 @@ namespace app {
     int getMaxScrollX();
     void makeTabVisible(Tab* tab);
     void calculateHot();
+    Tabs* getTabsAt(const gfx::Point& pos);
+    bool canDockAt(const gfx::Point& pos);
     gfx::Rect getTabCloseButtonBounds(Tab* tab, const gfx::Rect& box);
     void startDrag();
     void stopDrag(DropTabResult result);
