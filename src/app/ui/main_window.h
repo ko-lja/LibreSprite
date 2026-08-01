@@ -103,6 +103,8 @@ namespace app {
     DocumentView* getDocView();
     HomeView* getHomeView();
     void detachFolderExplorer();
+    void attachFolderWorkspace(FolderView* folderView);
+    void detachFolderWorkspace();
     void configureWorkspaceLayout();
 
     MainMenuBar* m_menuBar;
@@ -118,6 +120,7 @@ namespace app {
     PreviewEditorWindow* m_previewEditor;
     HomeView* m_homeView;
     DevConsoleView* m_devConsoleView;
+    FolderView* m_attachedFolderView;
     Notifications* m_notifications;
   };
 

@@ -35,6 +35,9 @@ public:
   const std::string& path() const { return m_path; }
   Workspace* workspace() const { return m_workspace; }
   ui::Widget* explorerWidget() const;
+  ui::Widget* workspaceWidget() const;
+  void attachWorkspaceWidget(ui::Widget* parent);
+  void restoreWorkspaceWidget();
   DocumentView* activeDocumentView() const;
   bool contains(DocumentView* view) const;
   bool hasModifiedDocuments() const;
@@ -69,6 +72,7 @@ private:
 
   std::string m_path;
   FolderExplorer* m_explorer;
+  ui::VBox* m_content;
   WorkspaceTabs* m_tabs;
   Workspace* m_workspace;
   base::ScopedConnection m_afterCommandConnection;

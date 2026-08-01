@@ -53,6 +53,7 @@ MainWindow::MainWindow()
   : m_mode(NormalMode)
   , m_homeView(nullptr)
   , m_devConsoleView(nullptr)
+  , m_attachedFolderView(nullptr)
 {
   // Load all menus by first time.
   AppMenus::instance()->reload();
@@ -183,6 +184,7 @@ MainWindow::~MainWindow()
       folderViews.push_back(folderView);
   }
   detachFolderExplorer();
+  detachFolderWorkspace();
   for (auto* folderView : folderViews) {
     m_workspace->removeView(folderView);
     delete folderView;
@@ -252,6 +254,7 @@ void MainWindow::folderViewSelected(FolderView* folderView)
     detachFolderExplorer();
     folderViewPlaceholder()->addChild(explorer);
   }
+  attachFolderWorkspace(folderView);
   folderViewPlaceholder()->setVisible(m_mode == NormalMode);
   configureWorkspaceLayout();
 }
@@ -260,6 +263,8 @@ void MainWindow::folderViewClosed(FolderView* folderView)
 {
   if (folderView->explorerWidget()->parent() == folderViewPlaceholder())
     folderViewPlaceholder()->removeChild(folderView->explorerWidget());
+  if (m_attachedFolderView == folderView)
+    detachFolderWorkspace();
 }
 
 void MainWindow::detachFolderExplorer()
@@ -267,6 +272,26 @@ void MainWindow::detachFolderExplorer()
   if (!folderViewPlaceholder()->children().empty())
     folderViewPlaceholder()->removeChild(folderViewPlaceholder()->children().front());
   folderViewPlaceholder()->setVisible(false);
+}
+
+void MainWindow::attachFolderWorkspace(FolderView* folderView)
+{
+  if (m_attachedFolderView != folderView) {
+    detachFolderWorkspace();
+    folderView->attachWorkspaceWidget(workspacePlaceholder());
+    m_attachedFolderView = folderView;
+  }
+  m_workspace->setVisible(false);
+  folderView->workspaceWidget()->setVisible(true);
+}
+
+void MainWindow::detachFolderWorkspace()
+{
+  if (m_attachedFolderView) {
+    m_attachedFolderView->restoreWorkspaceWidget();
+    m_attachedFolderView = nullptr;
+  }
+  m_workspace->setVisible(true);
 }
 
 HomeView* MainWindow::getHomeView()
@@ -392,6 +417,7 @@ void MainWindow::onActiveViewChange()
   }
   else {
     detachFolderExplorer();
+    detachFolderWorkspace();
     if (DocumentView* docView = getDocView())
       UIContext::instance()->setActiveView(docView);
     else
@@ -487,6 +513,10 @@ void MainWindow::onMouseOverTab(Tabs* tabs, TabView* tabView)
 
 DropViewPreviewResult MainWindow::onFloatingTab(Tabs* tabs, TabView* tabView, const gfx::Point& pos)
 {
+  if (activeFolderView() || dynamic_cast<FolderView*>(tabView)) {
+    m_workspace->removeDropViewPreview();
+    return DropViewPreviewResult::DROP_IN_TABS;
+  }
   return m_workspace->setDropViewPreview(pos,
     dynamic_cast<WorkspaceView*>(tabView),
     static_cast<WorkspaceTabs*>(tabs));
@@ -500,6 +530,9 @@ void MainWindow::onDockingTab(Tabs* tabs, TabView* tabView)
 DropTabResult MainWindow::onDropTab(Tabs* tabs, TabView* tabView, const gfx::Point& pos, bool clone)
 {
   m_workspace->removeDropViewPreview();
+
+  if (activeFolderView() || dynamic_cast<FolderView*>(tabView))
+    return DropTabResult::NOT_HANDLED;
 
   DropViewAtResult result =
     m_workspace->dropViewAt(pos, dynamic_cast<WorkspaceView*>(tabView), clone);

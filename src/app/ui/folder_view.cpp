@@ -26,7 +26,6 @@
 #include "base/fs.h"
 #include "base/path.h"
 #include "ui/alert.h"
-#include "ui/label.h"
 #include "ui/listbox.h"
 #include "ui/listitem.h"
 #include "ui/menu.h"
@@ -93,14 +92,12 @@ public:
   explicit FolderExplorer(FolderView* owner)
     : m_owner(owner)
     , m_model(owner->path(), get_readable_extensions())
-    , m_header(new Label(base::get_file_name(owner->path())))
     , m_view(new View)
     , m_list(new FolderListBox(this))
   {
+    noBorderNoChildSpacing();
     setExpansive(true);
-    m_header->setExpansive(true);
     m_view->setExpansive(true);
-    addChild(m_header);
     addChild(m_view);
     m_view->attachToView(m_list);
     m_list->DoubleClickItem.connect(base::Bind(&FolderExplorer::openSelected, this));
@@ -397,7 +394,6 @@ private:
 
   FolderView* m_owner;
   FolderTreeModel m_model;
-  Label* m_header;
   View* m_view;
   FolderListBox* m_list;
 
@@ -413,13 +409,6 @@ bool FolderListBox::onProcessMessage(Message* msg)
       m_owner->showContextMenu();
       return true;
     }
-  }
-  else if (msg->type() == kMouseUpMessage) {
-    auto* mouse = static_cast<MouseMessage*>(msg);
-    const bool result = ListBox::onProcessMessage(msg);
-    if (mouse->left())
-      m_owner->clickSelected();
-    return result;
   }
   else if (msg->type() == kKeyDownMessage && hasFocus()) {
     const auto key = static_cast<KeyMessage*>(msg)->scancode();
@@ -441,18 +430,22 @@ bool FolderListBox::onProcessMessage(Message* msg)
 FolderView::FolderView(const std::string& path)
   : m_path(base::normalize_path(path))
   , m_explorer(new FolderExplorer(this))
+  , m_content(new VBox)
   , m_tabs(new WorkspaceTabs(this))
   , m_workspace(new Workspace)
 {
+  noBorderNoChildSpacing();
+  m_content->noBorderNoChildSpacing();
+  m_content->setExpansive(true);
   m_tabs->setDockedStyle();
   m_workspace->setTabsBar(m_tabs);
   m_workspace->ActiveViewChanged.connect(&FolderView::onActiveDocumentChange, this);
   m_afterCommandConnection = UIContext::instance()->AfterCommandExecution.connect(
     &FolderView::onAfterCommandExecution, this);
-  m_tabs->setExpansive(true);
   m_workspace->setExpansive(true);
-  addChild(m_tabs);
-  addChild(m_workspace);
+  m_content->addChild(m_tabs);
+  m_content->addChild(m_workspace);
+  addChild(m_content);
 }
 
 FolderView::~FolderView()
@@ -465,6 +458,25 @@ FolderView::~FolderView()
 Widget* FolderView::explorerWidget() const
 {
   return m_explorer;
+}
+
+Widget* FolderView::workspaceWidget() const
+{
+  return m_content;
+}
+
+void FolderView::attachWorkspaceWidget(Widget* parent)
+{
+  if (m_content->parent() == parent)
+    return;
+  if (m_content->parent())
+    m_content->parent()->removeChild(m_content);
+  parent->addChild(m_content);
+}
+
+void FolderView::restoreWorkspaceWidget()
+{
+  attachWorkspaceWidget(this);
 }
 
 DocumentView* FolderView::activeDocumentView() const
@@ -613,18 +625,37 @@ void FolderView::onMouseOverTab(Tabs*, TabView* tabView)
 }
 
 DropViewPreviewResult FolderView::onFloatingTab(
-  Tabs*, TabView*, const gfx::Point&)
+  Tabs* tabs, TabView* tabView, const gfx::Point& pos)
 {
-  return DropViewPreviewResult::DROP_IN_TABS;
+  if (App::instance()->mainWindow()->getTabsBar()->bounds().contains(pos)) {
+    m_workspace->removeDropViewPreview();
+    return DropViewPreviewResult::DROP_IN_TABS;
+  }
+  return m_workspace->setDropViewPreview(
+    pos,
+    dynamic_cast<WorkspaceView*>(tabView),
+    static_cast<WorkspaceTabs*>(tabs));
 }
 
 void FolderView::onDockingTab(Tabs*, TabView*)
 {
+  m_workspace->removeDropViewPreview();
 }
 
 DropTabResult FolderView::onDropTab(
-  Tabs*, TabView*, const gfx::Point&, bool)
+  Tabs*, TabView* tabView, const gfx::Point& pos, bool clone)
 {
+  m_workspace->removeDropViewPreview();
+
+  if (App::instance()->mainWindow()->getTabsBar()->bounds().contains(pos))
+    return DropTabResult::NOT_HANDLED;
+
+  const auto result = m_workspace->dropViewAt(
+    pos, dynamic_cast<WorkspaceView*>(tabView), clone);
+  if (result == DropViewAtResult::MOVED_TO_OTHER_PANEL)
+    return DropTabResult::REMOVE;
+  if (result == DropViewAtResult::CLONED_VIEW)
+    return DropTabResult::DONT_REMOVE;
   return DropTabResult::NOT_HANDLED;
 }
 

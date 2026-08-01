@@ -80,6 +80,7 @@ namespace app {
     WorkspacePanel* getViewPanel(WorkspaceView* view);
     WorkspacePanel* getPanelAt(const gfx::Point& pos);
     WorkspaceTabs* getTabsAt(const gfx::Point& pos);
+    bool ownsPanel(WorkspacePanel* panel) const;
 
     WorkspacePanel m_mainPanel;
     WorkspaceTabs* m_tabs;

@@ -171,6 +171,12 @@ void Workspace::onResize(ui::ResizeEvent& ev)
 DropViewPreviewResult Workspace::setDropViewPreview(const gfx::Point& pos,
   WorkspaceView* view, WorkspaceTabs* tabs)
 {
+  WorkspacePanel* sourcePanel = getViewPanel(view);
+  if (!sourcePanel || !ownsPanel(sourcePanel)) {
+    removeDropViewPreview();
+    return DropViewPreviewResult::FLOATING;
+  }
+
   TabView* tabView = dynamic_cast<TabView*>(view);
   WorkspaceTabs* newTabs = nullptr;
   WorkspacePanel* panel = getPanelAt(pos);
@@ -217,14 +223,18 @@ void Workspace::removeDropViewPreview()
 
 DropViewAtResult Workspace::dropViewAt(const gfx::Point& pos, WorkspaceView* view, bool clone)
 {
+  WorkspacePanel* sourcePanel = getViewPanel(view);
+  if (!sourcePanel || !ownsPanel(sourcePanel))
+    return DropViewAtResult::NOTHING;
+
   WorkspaceTabs* tabs = getTabsAt(pos);
   WorkspacePanel* panel = getPanelAt(pos);
 
   if (panel) {
     // Create new panel
-    return panel->dropViewAt(pos, getViewPanel(view), view, clone);
+    return panel->dropViewAt(pos, sourcePanel, view, clone);
   }
-  else if (tabs && tabs != getViewPanel(view)->tabs()) {
+  else if (tabs && tabs != sourcePanel->tabs()) {
     // Dock tab in other tabs
     WorkspacePanel* dropPanel = tabs->panel();
     ASSERT(dropPanel);
@@ -280,8 +290,12 @@ WorkspacePanel* Workspace::getPanelAt(const gfx::Point& pos)
 {
   Widget* widget = manager()->pick(pos);
   while (widget) {
-    if (widget->type() == WorkspacePanel::Type())
-      return static_cast<WorkspacePanel*>(widget);
+    if (widget->type() == WorkspacePanel::Type()) {
+      auto* panel = static_cast<WorkspacePanel*>(widget);
+      // A nested workspace is an ownership boundary. Do not continue
+      // walking into an outer workspace when the picked panel is foreign.
+      return ownsPanel(panel) ? panel: nullptr;
+    }
 
     widget = widget->parent();
   }
@@ -292,12 +306,27 @@ WorkspaceTabs* Workspace::getTabsAt(const gfx::Point& pos)
 {
   Widget* widget = manager()->pick(pos);
   while (widget) {
-    if (widget->type() == Tabs::Type())
-      return static_cast<WorkspaceTabs*>(widget);
+    if (widget->type() == Tabs::Type()) {
+      auto* tabs = static_cast<WorkspaceTabs*>(widget);
+      // Tabs can be visually nested inside another workspace, but drops
+      // must stay in the workspace that owns their panel.
+      return tabs->panel() && ownsPanel(tabs->panel()) ? tabs: nullptr;
+    }
 
     widget = widget->parent();
   }
   return nullptr;
+}
+
+bool Workspace::ownsPanel(WorkspacePanel* panel) const
+{
+  Widget* widget = panel;
+  while (widget) {
+    if (widget->type() == Workspace::Type())
+      return widget == this;
+    widget = widget->parent();
+  }
+  return false;
 }
 
 void Workspace::onNewInputPriority(InputChainElement* newElement)
