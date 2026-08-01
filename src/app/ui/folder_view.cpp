@@ -326,6 +326,9 @@ private:
     if (select)
       m_list->selectChild(select);
     m_list->layout();
+    m_view->updateView();
+    if (select)
+      m_list->makeChildVisible(select);
     m_list->invalidate();
   }
 
