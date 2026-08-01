@@ -307,7 +307,8 @@ FileSelector::FileSelector(FileSelectorType type, FileSelectorDelegate* delegate
     findChild("file_name_label")->setVisible(false);
     m_fileName->parent()->setVisible(false);
     findChild("file_type_label")->setVisible(false);
-    findChild("file_type_row")->setVisible(false);
+    findChild("file_type")->setVisible(false);
+    findChild("resize_options")->setVisible(false);
   }
 }
 
