@@ -34,7 +34,9 @@ jobs:
         ninja
         cd ..
     - name: Setup Submodule
-      run: git clone https://github.com/LibreSprite/ls-android-deps.git android
+      run: |
+        git clone https://github.com/LibreSprite/ls-android-deps.git android
+        sed -i '$a include(${SRC}/../cmake/AndroidFolderWorkspace.cmake)' android/main/CMakeLists.txt
     - name: Build Application
       run: |
         cd android
