@@ -163,6 +163,9 @@ namespace app {
     void selectNextTab();
     void selectPreviousTab();
     TabView* getSelectedTab();
+    TabView* getTabSelectedOnMouseDown() const {
+      return m_selectedOnMouseDown ? m_selectedOnMouseDown->view: nullptr;
+    }
 
     void setDockedStyle();
 
@@ -227,6 +230,10 @@ namespace app {
     // Current active tab. When this tab changes, the
     // TabsDelegate::onSelectTab() is called.
     TabPtr m_selected;
+
+    // The active tab before the current mouse gesture selected a
+    // different tab. This stays set through drag/drop delegate calls.
+    TabPtr m_selectedOnMouseDown;
 
     // Delegate of notifications
     TabsDelegate* m_delegate;

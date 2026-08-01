@@ -513,7 +513,9 @@ void MainWindow::onMouseOverTab(Tabs* tabs, TabView* tabView)
 
 DropViewPreviewResult MainWindow::onFloatingTab(Tabs* tabs, TabView* tabView, const gfx::Point& pos)
 {
-  if (activeFolderView() || dynamic_cast<FolderView*>(tabView)) {
+  if (activeFolderView() ||
+      dynamic_cast<FolderView*>(tabView) ||
+      dynamic_cast<FolderView*>(tabs->getTabSelectedOnMouseDown())) {
     m_workspace->removeDropViewPreview();
     return DropViewPreviewResult::DROP_IN_TABS;
   }
@@ -531,7 +533,9 @@ DropTabResult MainWindow::onDropTab(Tabs* tabs, TabView* tabView, const gfx::Poi
 {
   m_workspace->removeDropViewPreview();
 
-  if (activeFolderView() || dynamic_cast<FolderView*>(tabView))
+  if (activeFolderView() ||
+      dynamic_cast<FolderView*>(tabView) ||
+      dynamic_cast<FolderView*>(tabs->getTabSelectedOnMouseDown()))
     return DropTabResult::NOT_HANDLED;
 
   DropViewAtResult result =

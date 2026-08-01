@@ -392,6 +392,7 @@ bool Tabs::onProcessMessage(Message* msg)
     case kMouseDownMessage:
       if (m_hot && !hasCapture()) {
         MouseMessage* mouseMsg = static_cast<MouseMessage*>(msg);
+        m_selectedOnMouseDown = m_selected;
         m_dragMousePos = mouseMsg->position();
         m_floatingOffset = mouseMsg->position() -
           (bounds().origin() + getTabBounds(m_hot.get()).origin());
@@ -444,6 +445,8 @@ bool Tabs::onProcessMessage(Message* msg)
 
           stopDrag(result);
         }
+
+        m_selectedOnMouseDown.reset();
       }
       return true;
 
